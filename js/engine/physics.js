@@ -85,18 +85,31 @@ export function computeChristoffel(x, y, eps = 0.02) {
     const det = g.g11 * g.g22 - g.g12 * g.g21;
     const gi11 = g.g22 / det;
     const gi12 = -g.g12 / det;
+    const gi21 = -g.g21 / det;
     const gi22 = g.g11 / det;
 
-    // Symboles de Christoffel (simplifiés pour surface 2D)
-    // Γ¹₁₁, Γ¹₁₂, Γ¹₂₂, Γ²₁₁, Γ²₁₂, Γ²₂₂
-    return {
-        G111: 0.5 * gi11 * dg11dx,
-        G112: 0.5 * gi11 * dg11dy,
-        G122: 0.5 * gi11 * (2 * dg12dy - dg22dx),
-        G211: 0.5 * gi22 * (2 * dg12dx - dg11dy),
-        G212: 0.5 * gi22 * dg22dx,
-        G222: 0.5 * gi22 * dg22dy
-    };
+    // Symboles de Christoffel complets pour surface 2D
+    // Γⁱⱼₖ = ½ gⁱˡ (∂gₗⱼ/∂xᵏ + ∂gₗₖ/∂xʲ - ∂gⱼₖ/∂xˡ)
+    
+    // Γ¹₁₁ = ½ g¹ˡ (∂gₗ₁/∂x¹ + ∂gₗ₁/∂x¹ - ∂g₁₁/∂xˡ)
+    const G111 = 0.5 * (gi11 * dg11dx + gi12 * (2 * dg12dx - dg11dy));
+    
+    // Γ¹₁₂ = Γ¹₂₁ = ½ g¹ˡ (∂gₗ₁/∂x² + ∂gₗ₂/∂x¹ - ∂g₁₂/∂xˡ)
+    const G112 = 0.5 * (gi11 * dg11dy + gi12 * dg22dx);
+    
+    // Γ¹₂₂ = ½ g¹ˡ (∂gₗ₂/∂x² + ∂gₗ₂/∂x² - ∂g₂₂/∂xˡ)
+    const G122 = 0.5 * (gi11 * (2 * dg12dy - dg22dx) + gi12 * dg22dy);
+    
+    // Γ²₁₁ = ½ g²ˡ (∂gₗ₁/∂x¹ + ∂gₗ₁/∂x¹ - ∂g₁₁/∂xˡ)
+    const G211 = 0.5 * (gi21 * dg11dx + gi22 * (2 * dg12dx - dg11dy));
+    
+    // Γ²₁₂ = Γ²₂₁ = ½ g²ˡ (∂gₗ₁/∂x² + ∂gₗ₂/∂x¹ - ∂g₁₂/∂xˡ)
+    const G212 = 0.5 * (gi21 * dg11dy + gi22 * dg22dx);
+    
+    // Γ²₂₂ = ½ g²ˡ (∂gₗ₂/∂x² + ∂gₗ₂/∂x² - ∂g₂₂/∂xˡ)
+    const G222 = 0.5 * (gi21 * (2 * dg12dy - dg22dx) + gi22 * dg22dy);
+
+    return { G111, G112, G122, G211, G212, G222 };
 }
 
 // ===== CALCUL DE LA COURBURE GAUSSIENNE =====
@@ -129,47 +142,78 @@ export function computeGaussianCurvature(x, y, eps = 0.05) {
 }
 
 // ===== ÉQUATION DES GÉODÉSIQUES =====
-// d²xⁱ/dt² + Γⁱⱼₖ (dxʲ/dt)(dxᵏ/dt) = 0
+// Pour un gameplay réaliste, on intègre en temps coordonné (pas en paramètre affine)
+// Ainsi une particule lente passe plus de temps dans la zone courbée
 
 function geodesicAcceleration(pos, vel) {
     const G = computeChristoffel(pos.x, pos.y);
 
     const vx = vel.x;
     const vy = vel.y;
+    
+    // Vitesse totale
+    const speed = Math.sqrt(vx * vx + vy * vy);
+    if (speed < 0.001) return { x: 0, y: 0 };
 
-    // Accélération due à la courbure
+    // Accélération géodésique de base
     const ax = -(G.G111 * vx * vx + 2 * G.G112 * vx * vy + G.G122 * vy * vy);
     const ay = -(G.G211 * vx * vx + 2 * G.G212 * vx * vy + G.G222 * vy * vy);
 
     return { x: ax, y: ay };
 }
 
+// Force de "gravité effective" - simule l'attraction vers les puits
+// C'est l'accélération que subirait une particule au repos
+function computeEffectiveGravity(pos) {
+    const { dzdx, dzdy } = computeGradient(pos.x, pos.y);
+    
+    // Le gradient pointe vers le haut de la pente
+    // La gravité tire vers le bas (signe négatif)
+    const gravityStrength = 2.0;
+    
+    return {
+        x: -dzdx * gravityStrength,
+        y: -dzdy * gravityStrength
+    };
+}
+
 // ===== INTÉGRATION RK4 =====
+
+function totalAcceleration(pos, vel) {
+    // Combinaison : géodésique (déviation) + gravité effective (attraction)
+    const geodesic = geodesicAcceleration(pos, vel);
+    const gravity = computeEffectiveGravity(pos);
+    
+    return {
+        x: geodesic.x + gravity.x,
+        y: geodesic.y + gravity.y
+    };
+}
 
 export function integrateRK4(pos, vel, dt) {
     // k1
-    const a1 = geodesicAcceleration(pos, vel);
+    const a1 = totalAcceleration(pos, vel);
     const k1v = scale2D(a1, dt);
     const k1p = scale2D(vel, dt);
 
     // k2
     const pos2 = add2D(pos, scale2D(k1p, 0.5));
     const vel2 = add2D(vel, scale2D(k1v, 0.5));
-    const a2 = geodesicAcceleration(pos2, vel2);
+    const a2 = totalAcceleration(pos2, vel2);
     const k2v = scale2D(a2, dt);
     const k2p = scale2D(vel2, dt);
 
     // k3
     const pos3 = add2D(pos, scale2D(k2p, 0.5));
     const vel3 = add2D(vel, scale2D(k2v, 0.5));
-    const a3 = geodesicAcceleration(pos3, vel3);
+    const a3 = totalAcceleration(pos3, vel3);
     const k3v = scale2D(a3, dt);
     const k3p = scale2D(vel3, dt);
 
     // k4
     const pos4 = add2D(pos, k3p);
     const vel4 = add2D(vel, k3v);
-    const a4 = geodesicAcceleration(pos4, vel4);
+    const a4 = totalAcceleration(pos4, vel4);
     const k4v = scale2D(a4, dt);
     const k4p = scale2D(vel4, dt);
 
@@ -191,7 +235,7 @@ export function integrateRK4(pos, vel, dt) {
 
 export function computeTrajectory(startPos, startVel, options = {}) {
     const {
-        maxSteps = 2000,
+        maxSteps = 15000,
         dt = 0.01,
         bounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 },
         goalPos = null,

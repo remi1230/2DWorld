@@ -220,7 +220,7 @@ export class Renderer {
         this.initLineBuffer();
 
         this.camera = {
-            rotX: -60,
+            rotX: -33,
             rotY: 0,
             rotZ: 0,
             distance: 18
