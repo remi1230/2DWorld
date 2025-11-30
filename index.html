@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geodesic - Jeu de trajectoires en espace courbe</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>🌌 GEODESIC</h1>
+    <p class="subtitle">Lancez votre projectile à travers l'espace-temps courbe</p>
+
+    <div class="game-container">
+        <!-- Zone de jeu -->
+        <div class="canvas-wrapper">
+            <canvas id="glCanvas" width="800" height="600"></canvas>
+            <div id="message" class="message"></div>
+        </div>
+
+        <!-- Panneau de contrôle -->
+        <div class="controls">
+            <!-- Info niveau -->
+            <div class="panel">
+                <h3>📍 Niveau</h3>
+                <select id="levelSelect"></select>
+                <div id="levelInfo"></div>
+                <div class="stats">
+                    <span>Tentatives : <strong id="attempts">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Visée -->
+            <div class="panel">
+                <h3>🎯 Visée</h3>
+                
+                <div class="control-group">
+                    <label>Angle :</label>
+                    <input type="range" id="angle" min="0" max="360" value="45" step="1">
+                    <span class="value" id="angleVal">45°</span>
+                </div>
+                
+                <div class="control-group">
+                    <label>Puissance :</label>
+                    <input type="range" id="power" min="0.5" max="5" value="2" step="0.1">
+                    <span class="value" id="powerVal">2.0</span>
+                </div>
+
+                <div class="buttons">
+                    <button id="launchBtn" class="btn-primary">🚀 Lancer</button>
+                    <button id="resetBtn" class="btn-secondary">↺ Reset</button>
+                </div>
+                
+                <div class="buttons">
+                    <button id="nextBtn" class="btn-success" disabled>Niveau suivant →</button>
+                </div>
+            </div>
+
+            <!-- Caméra -->
+            <div class="panel camera-controls">
+                <h3>🎥 Caméra</h3>
+                
+                <div class="control-group">
+                    <label>Rot. X :</label>
+                    <input type="range" id="rotX" min="-90" max="90" value="-35" step="1">
+                    <span class="value" id="rotXVal">-60°</span>
+                </div>
+                
+                <div class="control-group">
+                    <label>Rot. Y :</label>
+                    <input type="range" id="rotY" min="-180" max="180" value="0" step="1">
+                    <span class="value" id="rotYVal">0°</span>
+                </div>
+                
+                <div class="control-group">
+                    <label>Roll :</label>
+                    <input type="range" id="rotZ" min="-180" max="180" value="0" step="1">
+                    <span class="value" id="rotZVal">0°</span>
+                </div>
+                
+                <div class="control-group">
+                    <label>Distance :</label>
+                    <input type="range" id="distance" min="5" max="30" value="18" step="0.5">
+                    <span class="value" id="distanceVal">18.0</span>
+                </div>
+            </div>
+
+            <!-- Aide -->
+            <div class="panel">
+                <h3>💡 Aide</h3>
+                <div class="help">
+                    <strong>Objectif :</strong> Atteindre le portail bleu en un seul tir.
+                    <ul>
+                        <li><span class="indicator start"></span>Zone de départ (vert)</li>
+                        <li><span class="indicator goal"></span>Portail d'arrivée (bleu)</li>
+                        <li><span class="indicator mass"></span>Masses (jaune) - courbent l'espace</li>
+                    </ul>
+                    <br>
+                    <strong>Physique :</strong> Votre projectile suit les géodésiques 
+                    de l'espace courbe. Les masses créent des puits gravitationnels 
+                    qui dévient sa trajectoire.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
